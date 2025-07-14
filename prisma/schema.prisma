@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id            String         @id @default(cuid())
+  email         String?        @unique
+  clerkId       String         @unique
+  createdAt     DateTime       @default(now())
+
+  clients       Client[]
+  employees     Employee[]
+  sales         Sales[]
+  payrolls      Payroll[]
+  sites         Site[]
+  siteEmployees SiteEmployee[]
+}
+
+model Client {
+  id            String     @id @default(cuid())
+  registrarId   String
+  companyName   String
+  phone         String
+  address       String
+  postalCode    String
+  contactPerson String
+  contactPhone  String
+  contactEmail  String?
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  registrar     User       @relation(fields: [registrarId], references: [id], onDelete: Cascade)
+
+  sales         Sales[]
+
+  @@map("clients")
+}
+
+model Employee {
+  id                     String   @id @default(cuid())
+  name                   String
+  phone                  String
+  birthDate              DateTime
+  emergencyContactPerson String?
+  emergencyContactPhone  String?
+  address                String?
+  postalCode             String?
+  bloodType              String?
+  bloodPressure          Int?
+  unitPay                Int?
+  hourlyOvertimePay      Int?
+  notes                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  registrarId            String
+  registrar              User     @relation(fields: [registrarId], references: [id])
+
+  payrolls               Payroll[]
+  siteEmployees          SiteEmployee[]
+
+  @@map("employees")
+}
+
+model Sales {
+  id          String    @id @default(cuid())
+  amount      Int       // 売上額（円）
+  date        DateTime  // 売上日
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  clientId    String
+
+  registrar   User    @relation(fields: [userId], references: [id])
+  client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("sales")
+}
+
+model Payroll {
+  id               String   @id @default(cuid())
+  employeeId       String
+  userId           String
+  startDate        DateTime
+  endDate          DateTime
+  overtimeHours    Int?
+  siteCount        Int
+  unitPay          Int
+  sitePay          Int
+  hourlyOvertimePay Int
+  overtime         Int
+  totalAmount      Int
+  lastPaymentDate  DateTime?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  employee         Employee @relation(fields: [employeeId], references: [id])
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@map("payrolls")
+}
+
+model Site {
+  id            String         @id @default(cuid())
+  name          String
+  contractor    String
+  contactPerson String
+  contactPhone  String
+  postalCode    String?
+  address       String
+  googleMapLink String?
+  employeeNames String?        // 派遣従業員名（カンマ区切り）
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  userId        String
+
+  user          User           @relation(fields: [userId], references: [id])
+  siteEmployees SiteEmployee[]
+  siteDates     SiteDate[]     // ← 追加: 日付のリスト
+
+  @@map("sites")
+}
+
+model SiteDate {
+  id        String   @id @default(cuid())
+  siteId    String
+  date      DateTime
+  startTime DateTime?
+  endTime   DateTime?
+
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_dates")
+}
+
+
+model SiteEmployee {
+  id         String    @id @default(cuid())
+  siteId     String
+  employeeId String
+  createdAt  DateTime  @default(now())
+  userId     String
+
+  site       Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  user                   User      @relation(fields: [userId], references: [id])
+
+  @@unique([siteId, employeeId])
+  @@map("site_employees")
+}
