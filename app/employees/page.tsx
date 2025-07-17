@@ -1,29 +1,29 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import ClientList from "@/components/tables/ClientList";
+import EmployeeList from "@/components/tables/EmployeeList";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
-export default async function ClientsPage() {
+export default async function EmployeesPage() {
   return (
     <DashboardLayout>
       <div className="p-4 bg-slate-100 min-h-screen">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold">取引先管理</h2>
+            <h2 className="text-2xl font-bold">スタッフ管理</h2>
             <p className="text-slate-500 text-sm mt-2">
-              取引先の一覧を確認・管理できます。
+              スタッフの一覧を管理・作成できます。
             </p>
           </div>
-          <Link href="/clients/new">
+          <Link href="/employees/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              新規取引先登録
+              新規スタッフ登録
             </Button>
           </Link>
         </div>
 
-        <ClientList />
+        <EmployeeList />
       </div>
     </DashboardLayout>
   );
