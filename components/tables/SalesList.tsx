@@ -38,6 +38,25 @@ interface SalesListResponse {
   pagination: Pagination;
 }
 
+interface Client {
+  id: string;
+  companyName: string;
+}
+
+interface ClientStats {
+  client: {
+    id: string;
+    companyName: string;
+  };
+  totalAmount: number;
+  monthlyData: {
+    year: number;
+    month: number;
+    amount: number;
+    label: string;
+  }[];
+}
+
 export default function SalesList() {
   const router = useRouter();
   const [sales, setSales] = useState<Sales[]>([]);
@@ -55,6 +74,13 @@ export default function SalesList() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 取引先ごとの売上確認用
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [clientStats, setClientStats] = useState<ClientStats | null>(null);
+  const [isClientStatsLoading, setIsClientStatsLoading] = useState(false);
+  const [clientStatsError, setClientStatsError] = useState<string | null>(null);
 
   // 年リスト生成（2000年〜現在）
   const years = Array.from(
@@ -96,6 +122,34 @@ export default function SalesList() {
       setIsLoading(false);
     }
   };
+
+  // 取引先一覧取得
+  useEffect(() => {
+    axios.get("/api/clients").then((res) => {
+      setClients(res.data.clients);
+    });
+  }, []);
+
+  // 取引先選択時に売上統計取得
+  useEffect(() => {
+    if (!selectedClientId) {
+      setClientStats(null);
+      return;
+    }
+    setIsClientStatsLoading(true);
+    setClientStatsError(null);
+    axios
+      .get(`/api/sales/client-stats?clientId=${selectedClientId}`)
+      .then((res) => {
+        setClientStats(res.data);
+      })
+      .catch((err) => {
+        setClientStatsError(
+          err.response?.data?.error || "売上統計の取得に失敗しました"
+        );
+      })
+      .finally(() => setIsClientStatsLoading(false));
+  }, [selectedClientId]);
 
   // 初回読み込み
   useEffect(() => {
@@ -148,186 +202,259 @@ export default function SalesList() {
   }
 
   return (
-    <Card className="max-w-6xl mx-auto mt-8">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>売上一覧</CardTitle>
-            <CardDescription className="pt-2">
-              登録されている売上データの一覧です
-            </CardDescription>
+    <>
+      {/* 売上一覧カード */}
+      <Card className="max-w-6xl mx-auto mt-8">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>月次売上一覧</CardTitle>
+              <CardDescription className="pt-2">
+                登録されている月次売上データの一覧です
+              </CardDescription>
+            </div>
+            {/* <Button onClick={() => router.push("/sales/new")}>新規登録</Button> */}
           </div>
-          <Button onClick={() => router.push("/sales/new")}>新規登録</Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* 検索フォーム */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex gap-4 items-end">
+        </CardHeader>
+        <CardContent>
+          {/* 検索フォーム */}
+          <form onSubmit={handleSearch} className="mb-6">
+            <div className="flex gap-4 items-end">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  年月で検索
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="border border-slate-300 rounded-md px-2 py-2"
+                  >
+                    {years.map((year) => (
+                      <option key={year} value={year}>
+                        {year}年
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="border border-slate-300 rounded-md px-2 py-2"
+                  >
+                    {months.map((month) => (
+                      <option key={month} value={month}>
+                        {month}月
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <Button type="submit" disabled={isLoading} className="h-10">
+                検索
+              </Button>
+            </div>
+          </form>
+
+          {/* ローディング表示 */}
+          {isLoading && <TableLoader />}
+
+          {/* 売上一覧 */}
+          {!isLoading && sales.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-slate-500">売上データが登録されていません</p>
+              <Button
+                onClick={() => router.push("/sales/new")}
+                className="mt-4"
+              >
+                最初の売上を登録
+              </Button>
+            </div>
+          )}
+
+          {!isLoading && sales.length > 0 && (
+            <>
+              {/* 合計表示 */}
+              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+                <p className="text-lg font-semibold text-slate-900">
+                  合計売上: ¥{totalAmount.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-4 font-medium">取引先</th>
+                      <th className="text-left p-4 font-medium">売上金額</th>
+                      <th className="text-left p-4 font-medium">売上日</th>
+                      <th className="text-left p-4 font-medium">備考</th>
+                      <th className="text-left p-4 font-medium">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((sale) => (
+                      <tr key={sale.id} className="border-b hover:bg-slate-50">
+                        <td className="p-4">
+                          <div className="font-medium">
+                            {sale.client.companyName}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="font-semibold text-green-600">
+                            ¥{sale.amount.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          {new Date(sale.date).toLocaleDateString("ja-JP")}
+                        </td>
+                        <td className="p-4">
+                          <span className="text-slate-600">
+                            {sale.notes || "なし"}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/sales/${sale.id}`)}
+                              className="text-blue-500 hover:text-blue-700"
+                            >
+                              <ArrowRight />
+                              詳細
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/sales/${sale.id}/edit`)
+                              }
+                              className="text-green-500 hover:text-green-700"
+                            >
+                              <Edit2 />
+                              編集
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(sale.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 />
+                              削除
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ページネーション */}
+              {pagination.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={pagination.page <= 1}
+                  >
+                    前へ
+                  </Button>
+
+                  <span className="text-sm">
+                    {pagination.page} / {pagination.totalPages} ページ (
+                    {pagination.total}件中{" "}
+                    {(pagination.page - 1) * pagination.limit + 1}-
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.total
+                    )}
+                    件)
+                  </span>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={pagination.page >= pagination.totalPages}
+                  >
+                    次へ
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 取引先ごとの売上確認カード */}
+      <Card className="max-w-6xl mx-auto mt-8">
+        <CardHeader>
+          <CardTitle>取引先別月次売上一覧</CardTitle>
+          <CardDescription className="pt-2">
+            登録済み取引先ごとの売上総額・月次売上を確認できます
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-end mb-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                年月で検索
+                取引先を選択
               </label>
-              <div className="flex gap-2">
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="border border-slate-300 rounded-md px-2 py-2"
-                >
-                  {years.map((year) => (
-                    <option key={year} value={year}>
-                      {year}年
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="border border-slate-300 rounded-md px-2 py-2"
-                >
-                  {months.map((month) => (
-                    <option key={month} value={month}>
-                      {month}月
-                    </option>
-                  ))}
-                </select>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="border border-slate-300 rounded-md px-2 py-2 min-w-[200px]"
+              >
+                <option value="">選択してください</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.companyName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {isClientStatsLoading && <TableLoader />}
+          {clientStatsError && (
+            <div className="text-red-500 mb-4">{clientStatsError}</div>
+          )}
+
+          {clientStats && (
+            <>
+              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+                <p className="text-lg font-semibold text-slate-900">
+                  {clientStats.client.companyName} の売上総額: ¥
+                  {clientStats.totalAmount.toLocaleString()}
+                </p>
               </div>
-            </div>
-            <Button type="submit" disabled={isLoading} className="h-10">
-              検索
-            </Button>
-          </div>
-        </form>
-
-        {/* ローディング表示 */}
-        {isLoading && <TableLoader />}
-
-        {/* 売上一覧 */}
-        {!isLoading && sales.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-slate-500">売上データが登録されていません</p>
-            <Button onClick={() => router.push("/sales/new")} className="mt-4">
-              最初の売上を登録
-            </Button>
-          </div>
-        )}
-
-        {!isLoading && sales.length > 0 && (
-          <>
-            {/* 合計表示 */}
-            <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-              <p className="text-lg font-semibold text-slate-900">
-                合計売上: ¥{totalAmount.toLocaleString()}
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-medium">取引先</th>
-                    <th className="text-left p-4 font-medium">売上金額</th>
-                    <th className="text-left p-4 font-medium">売上日</th>
-                    <th className="text-left p-4 font-medium">備考</th>
-                    <th className="text-left p-4 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sales.map((sale) => (
-                    <tr key={sale.id} className="border-b hover:bg-slate-50">
-                      <td className="p-4">
-                        <div className="font-medium">
-                          {sale.client.companyName}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-semibold text-green-600">
-                          ¥{sale.amount.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        {new Date(sale.date).toLocaleDateString("ja-JP")}
-                      </td>
-                      <td className="p-4">
-                        <span className="text-slate-600">
-                          {sale.notes || "なし"}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => router.push(`/sales/${sale.id}`)}
-                            className="text-blue-500 hover:text-blue-700"
-                          >
-                            <ArrowRight />
-                            詳細
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              router.push(`/sales/${sale.id}/edit`)
-                            }
-                            className="text-green-500 hover:text-green-700"
-                          >
-                            <Edit2 />
-                            編集
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(sale.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 />
-                            削除
-                          </Button>
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-4 font-medium">年月</th>
+                      <th className="text-left p-4 font-medium">月間売上</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* ページネーション */}
-            {pagination.totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page <= 1}
-                >
-                  前へ
-                </Button>
-
-                <span className="text-sm">
-                  {pagination.page} / {pagination.totalPages} ページ (
-                  {pagination.total}件中{" "}
-                  {(pagination.page - 1) * pagination.limit + 1}-
-                  {Math.min(
-                    pagination.page * pagination.limit,
-                    pagination.total
-                  )}
-                  件)
-                </span>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.totalPages}
-                >
-                  次へ
-                </Button>
+                  </thead>
+                  <tbody>
+                    {clientStats.monthlyData.map((m) => (
+                      <tr key={`${m.year}-${m.month}`} className="border-b">
+                        <td className="p-4">{m.label}</td>
+                        <td className="p-4 font-semibold text-green-600">
+                          ¥{m.amount.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }

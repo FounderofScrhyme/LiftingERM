@@ -119,13 +119,14 @@ model Payroll {
 model Site {
   id            String         @id @default(cuid())
   name          String
-  contractor    String
+  client        String
   contactPerson String
   contactPhone  String
   postalCode    String?
   address       String
   googleMapLink String?
   employeeNames String?        // 派遣従業員名（カンマ区切り）
+  employeeData  Json?          // 給与計算用のスタッフ詳細データ
   notes         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

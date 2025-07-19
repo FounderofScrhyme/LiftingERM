@@ -10,7 +10,11 @@ export const clientSchema = z.object({
     .optional(),
   contact_person: z.string().min(1, "担当者名は必須です"),
   contact_phone: z.string().min(1, "担当者電話番号は必須です"),
-  contact_email: z.string().email("メールアドレスの形式が不正です").optional(),
+  contact_email: z
+    .string()
+    .email("メールアドレスの形式が不正です")
+    .optional()
+    .or(z.literal("")),
   notes: z.string().optional(),
 });
 

@@ -32,6 +32,19 @@ export async function POST(request: NextRequest) {
     // バリデーション
     const validatedData = employeeSchema.parse(body);
 
+    // 血圧の処理
+    let bloodPressure = null;
+    if (validatedData.blood_pressure) {
+      // 120/80 のような形式を数値に変換（収縮期血圧のみを保存）
+      const parts = validatedData.blood_pressure.split("/");
+      if (parts.length === 2) {
+        const systolic = parseInt(parts[0]);
+        if (!isNaN(systolic)) {
+          bloodPressure = systolic;
+        }
+      }
+    }
+
     const employee = await prisma.employee.create({
       data: {
         registrarId: user.id,
@@ -39,9 +52,7 @@ export async function POST(request: NextRequest) {
         phone: validatedData.phone,
         birthDate: validatedData.birthdate,
         bloodType: validatedData.blood_type,
-        bloodPressure: validatedData.blood_pressure
-          ? parseInt(validatedData.blood_pressure.replace(/[^0-9]/g, ""))
-          : null,
+        bloodPressure,
         unitPay: validatedData.unitpay,
         hourlyOvertimePay: validatedData.hourlyovertimePay,
         notes: validatedData.notes,

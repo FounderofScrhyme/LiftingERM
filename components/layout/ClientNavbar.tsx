@@ -26,7 +26,7 @@ const navLinks = [
     icon: LayoutDashboard,
   },
   {
-    label: "従業員管理",
+    label: "スタッフ管理",
     href: "/employees",
     icon: Users,
   },

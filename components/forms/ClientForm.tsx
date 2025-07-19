@@ -81,7 +81,7 @@ export default function ClientForm({ client, mode }: ClientFormProps) {
                 placeholder="会社名を入力"
               />
               {errors.company_name && (
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-red-600">
                   {errors.company_name.message}
                 </p>
               )}
@@ -95,7 +95,7 @@ export default function ClientForm({ client, mode }: ClientFormProps) {
                 placeholder="03-1234-5678"
               />
               {errors.phone && (
-                <p className="text-sm text-slate-600">{errors.phone.message}</p>
+                <p className="text-sm text-red-600">{errors.phone.message}</p>
               )}
             </div>
 
@@ -107,7 +107,7 @@ export default function ClientForm({ client, mode }: ClientFormProps) {
                 placeholder="777-7777"
               />
               {errors.postal_code && (
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-red-600">
                   {errors.postal_code.message}
                 </p>
               )}
@@ -130,7 +130,7 @@ export default function ClientForm({ client, mode }: ClientFormProps) {
                 <Label htmlFor="contact_person">担当者名 *</Label>
                 <Input id="contact_person" {...register("contact_person")} />
                 {errors.contact_person && (
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-red-600">
                     {errors.contact_person.message}
                   </p>
                 )}
@@ -140,7 +140,7 @@ export default function ClientForm({ client, mode }: ClientFormProps) {
                 <Label htmlFor="contact_phone">担当者電話番号 *</Label>
                 <Input id="contact_phone" {...register("contact_phone")} />
                 {errors.contact_phone && (
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-red-600">
                     {errors.contact_phone.message}
                   </p>
                 )}
@@ -150,7 +150,7 @@ export default function ClientForm({ client, mode }: ClientFormProps) {
                 <Label htmlFor="contact_email">担当者メール</Label>
                 <Input id="contact_email" {...register("contact_email")} />
                 {errors.contact_email && (
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-red-600">
                     {errors.contact_email.message}
                   </p>
                 )}

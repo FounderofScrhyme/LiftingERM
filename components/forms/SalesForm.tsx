@@ -142,8 +142,8 @@ export default function SalesForm({ sales, mode }: SalesFormProps) {
                   type="number"
                   {...register("amount", { valueAsNumber: true })}
                   placeholder="100000"
-                  min="0"
                 />
+
                 {errors.amount && (
                   <p className="text-sm text-slate-600">
                     {errors.amount.message}
