@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +34,7 @@ interface EmployeeFormProps {
 export default function EmployeeForm({ employee, mode }: EmployeeFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -216,12 +217,11 @@ export default function EmployeeForm({ employee, mode }: EmployeeFormProps) {
             <h3 className="text-lg font-medium">給与情報</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="unitpay">時給単価 *</Label>
+                <Label htmlFor="unitpay">現在の現場単価 *</Label>
                 <Input
                   id="unitpay"
-                  type="number"
                   {...register("unitpay", { valueAsNumber: true })}
-                  placeholder="8000"
+                  placeholder="15000"
                 />
                 {errors.unitpay && (
                   <p className="text-sm text-red-600">
@@ -236,7 +236,7 @@ export default function EmployeeForm({ employee, mode }: EmployeeFormProps) {
                   id="hourlyovertimePay"
                   type="number"
                   {...register("hourlyovertimePay", { valueAsNumber: true })}
-                  placeholder="1250"
+                  placeholder="2000"
                 />
                 {errors.hourlyovertimePay && (
                   <p className="text-sm text-red-600">

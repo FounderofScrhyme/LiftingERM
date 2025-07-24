@@ -210,14 +210,30 @@ export default function EmployeeList() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-4 font-medium">名前</th>
-                    <th className="text-left p-4 font-medium">年齢</th>
-                    <th className="text-left p-4 font-medium">電話番号</th>
-                    <th className="text-left p-4 font-medium">血液型</th>
-                    <th className="text-left p-4 font-medium">現場単価</th>
-                    <th className="text-left p-4 font-medium">残業代単価</th>
-                    <th className="text-left p-4 font-medium">緊急連絡先</th>
-                    <th className="text-left p-4 font-medium">操作</th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      名前
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      年齢
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      電話番号
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      血液型
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      現場単価
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      残業代単価
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      緊急連絡先
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -226,35 +242,35 @@ export default function EmployeeList() {
                       key={employee.id}
                       className="border-b hover:bg-slate-50"
                     >
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <div className="font-medium">{employee.name}</div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <span className="text-slate-600">
                           {calculateAge(employee.birthDate)}歳
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <span className="text-slate-600">{employee.phone}</span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <span className="text-slate-600">
                           {employee.bloodType || "未設定"}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <span className="font-semibold text-green-600">
                           ¥{employee.unitPay?.toLocaleString() || "未設定"}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <span className="font-semibold text-green-600">
                           ¥
                           {employee.hourlyOvertimePay?.toLocaleString() ||
                             "未設定"}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <div className="text-sm text-slate-600">
                           <div>
                             {employee.emergencyContactPerson || "未設定"}
@@ -264,7 +280,7 @@ export default function EmployeeList() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <div className="flex gap-2">
                           <Button
                             variant="outline"

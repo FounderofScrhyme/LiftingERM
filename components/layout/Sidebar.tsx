@@ -52,7 +52,7 @@ export default function Sidebar() {
     <div className="hidden md:flex h-full w-64 flex-col min-h-screen border-2 border-slate-200">
       <nav className="flex-1 space-y-2 p-4">
         {navLinks.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.label}

@@ -9,7 +9,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 export default function SitesPage() {
-  const [activeTab, setActiveTab] = useState<"list" | "calendar">("list");
+  const [activeTab, setActiveTab] = useState<"list" | "calendar">("calendar");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   return (
     <DashboardLayout>
@@ -21,12 +22,23 @@ export default function SitesPage() {
               現場一覧を管理・作成できます。
             </p>
           </div>
-          <Link href="/sites/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              新規現場登録
-            </Button>
-          </Link>
+          <Button
+            onClick={() => {
+              if (selectedDate) {
+                const y = selectedDate.getFullYear();
+                const m = (selectedDate.getMonth() + 1)
+                  .toString()
+                  .padStart(2, "0");
+                const d = selectedDate.getDate().toString().padStart(2, "0");
+                window.location.href = `/sites/new?date=${y}-${m}-${d}`;
+              } else {
+                window.location.href = "/sites/new";
+              }
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            新規現場登録
+          </Button>
         </div>
 
         {/* タブ切り替え */}
@@ -42,7 +54,7 @@ export default function SitesPage() {
                 onClick={() => setActiveTab("list")}
               >
                 <List className="w-4 h-4" />
-                一覧表示
+                月次一覧表示
               </button>
               <button
                 className={`border-b-2 py-2 px-1 text-sm font-medium flex items-center gap-2 ${
@@ -69,7 +81,10 @@ export default function SitesPage() {
         {/* カレンダー表示 */}
         {activeTab === "calendar" && (
           <div className="max-w-6xl mx-auto">
-            <SiteCalendarWrapper />
+            <SiteCalendarWrapper
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+            />
           </div>
         )}
       </div>

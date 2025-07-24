@@ -35,6 +35,13 @@ export default async function EditSitePage({ params }: EditSitePageProps) {
     include: {
       siteDates: {
         orderBy: { date: "asc" },
+        include: {
+          siteDateEmployees: {
+            include: {
+              employee: true,
+            },
+          },
+        },
       },
     },
   });

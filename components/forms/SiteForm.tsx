@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,11 +19,24 @@ import { Button } from "../ui/button";
 import { SiteInput, siteSchema } from "@/lib/validations/site";
 import { Loader } from "../ui/loader";
 import EmployeeSelect from "../ui/employee-select";
-import DateSelector from "../ui/date-selector";
+import DateTimeSelector from "../ui/date-time-selector";
 
 interface Client {
   id: string;
   companyName: string;
+}
+
+interface SiteSuggestion {
+  id: string;
+  name: string;
+  client: string;
+  contactPerson: string;
+  contactPhone: string;
+  postalCode?: string;
+  address: string;
+  googleMapLink?: string;
+  notes?: string;
+  startTime?: string;
 }
 
 interface SiteFormProps {
@@ -42,22 +55,31 @@ interface SiteFormProps {
     notes?: string;
   };
   mode: "create" | "edit";
+  initialDate?: Date | null;
 }
 
-export default function SiteForm({ site, mode }: SiteFormProps) {
+export default function SiteForm({ site, mode, initialDate }: SiteFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
-  const [selectedEmployees, setSelectedEmployees] = useState<
+  // 単一日付に変更
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [dateStartTime, setDateStartTime] = useState<string>("");
+  const [dateEmployees, setDateEmployees] = useState<
     Array<{
       id: string;
       name: string;
-      unitPay: number;
-      hourlyOvertimePay: number;
+      unitPay: number | null;
+      hourlyOvertimePay: number | null;
     }>
   >([]);
-  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+
+  // サジェスト用
+  const [siteSuggestions, setSiteSuggestions] = useState<SiteSuggestion[]>([]);
+  const [siteNameInput, setSiteNameInput] = useState(site?.name || "");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -96,26 +118,107 @@ export default function SiteForm({ site, mode }: SiteFormProps) {
     fetchClients();
   }, []);
 
-  // 編集時に既存データを設定
+  // サジェスト取得
+  useEffect(() => {
+    if (siteNameInput.length === 0) {
+      setSiteSuggestions([]);
+      return;
+    }
+    const fetchSuggestions = async () => {
+      try {
+        const res = await axios.get(
+          `/api/sites?search=${encodeURIComponent(siteNameInput)}&recent=1`
+        );
+        if (res.data && Array.isArray(res.data.sites)) {
+          setSiteSuggestions(res.data.sites);
+        }
+      } catch (e) {
+        setSiteSuggestions([]);
+      }
+    };
+    fetchSuggestions();
+  }, [siteNameInput]);
+
+  // サジェスト選択時の自動入力
+  const handleSuggestionSelect = (suggestion: SiteSuggestion) => {
+    setSiteNameInput(suggestion.name);
+    setValue("name", suggestion.name);
+    setValue("client", suggestion.client);
+    setValue("contactPerson", suggestion.contactPerson);
+    setValue("contactPhone", suggestion.contactPhone);
+    setValue("postalCode", suggestion.postalCode || "");
+    setValue("address", suggestion.address);
+    setValue("googleMapLink", suggestion.googleMapLink || "");
+    setValue("notes", suggestion.notes || "");
+    // 選択した日付（selectedDate）は維持し、スタッフ欄のみ空欄に
+    // 開始時間を元データからセット（なければ空欄）
+    if (suggestion.startTime) {
+      const t = new Date(suggestion.startTime).toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      setDateStartTime(t);
+    } else {
+      setDateStartTime("");
+    }
+    setDateEmployees([]); // スタッフ欄も空欄
+    setShowSuggestions(false);
+  };
+
+  // サジェストの外クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionRef.current &&
+        !suggestionRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 初期値としてinitialDateが渡された場合、selectedDateにセット
+  useEffect(() => {
+    if (mode === "create" && initialDate) {
+      setSelectedDate(initialDate);
+    }
+  }, [mode, initialDate]);
+
+  // 編集時の既存データセット
   useEffect(() => {
     if (site && mode === "edit" && !isLoadingClients) {
-      // 既存のスタッフ情報を設定
-      if (site.employeeData && Array.isArray(site.employeeData)) {
-        setSelectedEmployees(site.employeeData);
-      } else {
-        setSelectedEmployees([]);
-      }
-
-      // 既存の現場日を設定
-      if (site.siteDates && Array.isArray(site.siteDates)) {
-        const dates = site.siteDates.map(
-          (siteDate: any) => new Date(siteDate.date)
+      // 単一日付化
+      if (
+        site.siteDates &&
+        Array.isArray(site.siteDates) &&
+        site.siteDates.length > 0
+      ) {
+        const date = new Date(site.siteDates[0].date);
+        setSelectedDate(date);
+        setDateStartTime(
+          site.siteDates[0].startTime
+            ? new Date(site.siteDates[0].startTime).toLocaleTimeString(
+                "ja-JP",
+                { hour: "2-digit", minute: "2-digit", hour12: false }
+              )
+            : ""
         );
-        setSelectedDates(dates);
+        setDateEmployees(
+          site.siteDates[0].siteDateEmployees?.map((e: any) => ({
+            id: e.employee.id,
+            name: e.employee.name,
+            unitPay: e.unitPay,
+            hourlyOvertimePay: e.hourlyOvertimePay,
+          })) || []
+        );
       } else {
-        setSelectedDates([]);
+        setSelectedDate(null);
+        setDateStartTime("");
+        setDateEmployees([]);
       }
-
       reset({
         name: site.name,
         client: site.client,
@@ -133,28 +236,36 @@ export default function SiteForm({ site, mode }: SiteFormProps) {
   const onSubmit = async (data: any) => {
     setIsLoading(true);
     try {
-      // 選択されたスタッフ情報を保存用の形式に変換
-      const employeeNamesString = selectedEmployees
+      // 単一日付用データ整形
+      let siteDatesData: Array<{
+        date: string;
+        startTime: string | null;
+        endTime: null;
+        employees: typeof dateEmployees;
+      }> = [];
+      if (selectedDate) {
+        // JSTの0時でISO文字列を生成
+        const y = selectedDate.getFullYear();
+        const m = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
+        const d = selectedDate.getDate().toString().padStart(2, "0");
+        const dateIsoJst = `${y}-${m}-${d}T00:00:00+09:00`;
+        const dateKey = `${y}-${m}-${d}`;
+        siteDatesData = [
+          {
+            date: dateIsoJst,
+            startTime: dateStartTime
+              ? new Date(`${dateKey}T${dateStartTime}:00+09:00`).toISOString()
+              : null,
+            endTime: null,
+            employees: dateEmployees,
+          },
+        ];
+      }
+      const employeeNamesString = dateEmployees
         .map((emp) => emp.name)
         .join(", ");
-      const employeeData = selectedEmployees.map((emp) => ({
-        id: emp.id,
-        name: emp.name,
-        unitPay: emp.unitPay,
-        hourlyOvertimePay: emp.hourlyOvertimePay,
-      }));
-
-      // 選択された現場日を保存用の形式に変換
-      const siteDatesData = selectedDates.map((date) => ({
-        date: date.toISOString(),
-        startTime: null,
-        endTime: null,
-      }));
-
       const url = mode === "create" ? "/api/sites" : `/api/sites/${site?.id}`;
       const method = mode === "create" ? "post" : "put";
-
-      // バリデーション対象のデータのみを送信
       const formData = {
         name: data.name,
         client: data.client,
@@ -166,13 +277,10 @@ export default function SiteForm({ site, mode }: SiteFormProps) {
         employeeNames: employeeNamesString,
         notes: data.notes,
       };
-
       await axios[method](url, {
         ...formData,
-        employeeData: employeeData, // 給与計算用の詳細データ
-        siteDates: siteDatesData, // 現場日データ
+        siteDates: siteDatesData,
       });
-
       router.push("/sites");
       router.refresh();
     } catch (error: any) {
@@ -198,13 +306,34 @@ export default function SiteForm({ site, mode }: SiteFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2" ref={suggestionRef}>
               <Label htmlFor="name">現場名 *</Label>
               <Input
                 id="name"
                 {...register("name")}
+                value={siteNameInput}
+                onChange={(e) => {
+                  setSiteNameInput(e.target.value);
+                  setValue("name", e.target.value);
+                  setShowSuggestions(true);
+                }}
                 placeholder="現場名を入力"
+                autoComplete="off"
               />
+              {showSuggestions && siteSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {siteSuggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="w-full px-4 py-2 text-left hover:bg-slate-50"
+                      onClick={() => handleSuggestionSelect(s)}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              )}
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name.message}</p>
               )}
@@ -298,22 +427,66 @@ export default function SiteForm({ site, mode }: SiteFormProps) {
               )}
             </div>
 
+            {/* 日付・開始時間・スタッフを分離 */}
             <div className="space-y-2">
-              <Label htmlFor="employeeNames">派遣スタッフ</Label>
-              <EmployeeSelect
-                value={selectedEmployees}
-                onChange={setSelectedEmployees}
-                placeholder="スタッフ名を入力して選択..."
+              <Label htmlFor="siteDate">現場日 *</Label>
+              <Input
+                id="siteDate"
+                type="date"
+                value={
+                  selectedDate
+                    ? `${selectedDate.getFullYear()}-${(
+                        selectedDate.getMonth() + 1
+                      )
+                        .toString()
+                        .padStart(2, "0")}-${selectedDate
+                        .getDate()
+                        .toString()
+                        .padStart(2, "0")}`
+                    : ""
+                }
+                onChange={(e) => {
+                  if (e.target.value) {
+                    // JSTの0時でDateを生成
+                    setSelectedDate(
+                      new Date(`${e.target.value}T00:00:00+09:00`)
+                    );
+                  } else {
+                    setSelectedDate(null);
+                  }
+                }}
+                required
                 disabled={isLoading}
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="siteDates">現場日</Label>
-              <DateSelector
-                value={selectedDates}
-                onChange={setSelectedDates}
-                placeholder="現場日を選択..."
+              <Label htmlFor="startTime">開始時間 *</Label>
+              <select
+                id="startTime"
+                value={dateStartTime}
+                onChange={(e) => setDateStartTime(e.target.value)}
+                required
+                disabled={isLoading}
+                className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+              >
+                {Array.from({ length: 24 }).map((_, h) => [
+                  <option
+                    key={`${h}:00`}
+                    value={`${h.toString().padStart(2, "0")}:00`}
+                  >{`${h.toString().padStart(2, "0")}:00`}</option>,
+                  <option
+                    key={`${h}:30`}
+                    value={`${h.toString().padStart(2, "0")}:30`}
+                  >{`${h.toString().padStart(2, "0")}:30`}</option>,
+                ])}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="employees">スタッフ</Label>
+              <EmployeeSelect
+                value={dateEmployees}
+                onChange={setDateEmployees}
+                placeholder="スタッフを選択..."
                 disabled={isLoading}
               />
             </div>
@@ -341,7 +514,6 @@ export default function SiteForm({ site, mode }: SiteFormProps) {
               {isLoading ? (
                 <>
                   <Loader className="w-4 h-4 mr-2" />
-                  処理中...
                 </>
               ) : (
                 <>{mode === "create" ? "登録" : "更新"}</>

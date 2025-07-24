@@ -2,12 +2,24 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import SiteForm from "@/components/forms/SiteForm";
+import { cookies } from "next/headers";
+import { parse } from "date-fns";
 
-export default async function NewSitePage() {
+export default async function NewSitePage({
+  searchParams,
+}: {
+  searchParams: { date?: string };
+}) {
   const { userId } = await auth();
 
   if (!userId) {
     redirect("/sign-in");
+  }
+
+  // クエリパラメータからdateを取得
+  let initialDate: Date | null = null;
+  if (searchParams?.date) {
+    initialDate = parse(searchParams.date, "yyyy-MM-dd", new Date());
   }
 
   return (
@@ -19,7 +31,7 @@ export default async function NewSitePage() {
             新しい現場の情報を入力してください
           </p>
         </div>
-        <SiteForm mode="create" />
+        <SiteForm mode="create" initialDate={initialDate} />
       </div>
     </DashboardLayout>
   );

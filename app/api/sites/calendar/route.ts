@@ -53,6 +53,13 @@ export async function GET(request: NextRequest) {
       include: {
         siteDates: {
           orderBy: { date: "asc" },
+          include: {
+            siteDateEmployees: {
+              include: {
+                employee: true,
+              },
+            },
+          },
         },
       },
     });

@@ -19,6 +19,7 @@ import {
   Building2,
   Calendar,
   Users,
+  Edit,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -53,6 +54,13 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
     include: {
       siteDates: {
         orderBy: { date: "asc" },
+        include: {
+          siteDateEmployees: {
+            include: {
+              employee: true,
+            },
+          },
+        },
       },
     },
   });
@@ -190,7 +198,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
                       key={siteDate.id}
                       className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
                     >
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">
                           {formatDate(siteDate.date.toString())}
                         </p>
@@ -213,6 +221,36 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
                             )}
                           </p>
                         )}
+                        {/* スタッフ情報を表示 */}
+                        {siteDate.siteDateEmployees &&
+                          siteDate.siteDateEmployees.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs text-slate-500 mb-1">
+                                派遣スタッフ:
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {siteDate.siteDateEmployees.map(
+                                  (siteDateEmployee) => (
+                                    <span
+                                      key={siteDateEmployee.id}
+                                      className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
+                                    >
+                                      {siteDateEmployee.employee.name}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                      </div>
+                      <div className="ml-4">
+                        <Link
+                          href={`/sites/${site.id}/date/${siteDate.id}/edit`}
+                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          <Edit className="w-4 h-4" />
+                          編集
+                        </Link>
                       </div>
                     </div>
                   ))}

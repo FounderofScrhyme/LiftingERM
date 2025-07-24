@@ -27,6 +27,7 @@ model User {
   payrolls      Payroll[]
   sites         Site[]
   siteEmployees SiteEmployee[]
+  siteDateEmployees SiteDateEmployee[]
 }
 
 model Client {
@@ -72,6 +73,8 @@ model Employee {
 
   payrolls               Payroll[]
   siteEmployees          SiteEmployee[]
+  siteDateEmployees      SiteDateEmployee[]
+  unitPayHistory         UnitPayHistory[]
 
   @@map("employees")
 }
@@ -127,6 +130,7 @@ model Site {
   googleMapLink String?
   employeeNames String?        // 派遣従業員名（カンマ区切り）
   employeeData  Json?          // 給与計算用のスタッフ詳細データ
+  unitPayCondition String      @default("normal") // 単価条件: normal, half, 6000, 5000, 3000
   notes         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -147,8 +151,26 @@ model SiteDate {
   endTime   DateTime?
 
   site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteDateEmployees SiteDateEmployee[]
 
   @@map("site_dates")
+}
+
+model SiteDateEmployee {
+  id         String    @id @default(cuid())
+  siteDateId String
+  employeeId String
+  unitPay    Int?      // その日の単価
+  hourlyOvertimePay Int? // その日の残業単価
+  createdAt  DateTime  @default(now())
+  userId     String
+
+  siteDate   SiteDate @relation(fields: [siteDateId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([siteDateId, employeeId])
+  @@map("site_date_employees")
 }
 
 
@@ -165,4 +187,17 @@ model SiteEmployee {
 
   @@unique([siteId, employeeId])
   @@map("site_employees")
+}
+
+model UnitPayHistory {
+  id            String   @id @default(cuid())
+  employeeId    String
+  unitPay       Int
+  effectiveDate DateTime // 有効開始日
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("unit_pay_history")
 }

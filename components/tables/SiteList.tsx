@@ -1,6 +1,6 @@
 "use client";
 
-import { SiteDate, SiteEmployee } from "@/lib/generated/prisma";
+import { SiteEmployee } from "@/lib/generated/prisma";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,10 +19,24 @@ interface Site {
   contactPhone: string;
   googleMapLink: string | null;
   employeeNames: string | null;
-  siteDates: SiteDate[];
+  siteDates: SiteDateWithEmployees[];
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface SiteDateWithEmployees {
+  id: string;
+  date: string | Date;
+  startTime?: string | Date | null;
+  endTime?: string | Date | null;
+  siteDateEmployees?: Array<{
+    id: string;
+    employee: {
+      id: string;
+      name: string;
+    };
+  }>;
 }
 
 interface Pagination {
@@ -127,8 +141,10 @@ export default function SiteList() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ja-JP");
+  const formatDate = (dateInput: string | Date) => {
+    const date =
+      typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    return date.toLocaleDateString("ja-JP");
   };
 
   if (error) {
@@ -151,7 +167,7 @@ export default function SiteList() {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>現場一覧</CardTitle>
+            <CardTitle>今月の現場一覧</CardTitle>
             <p className="pt-2 text-sm text-slate-500">
               現場の一覧を管理・作成できます。
             </p>
@@ -235,41 +251,38 @@ export default function SiteList() {
               <table className="w-full">
                 <thead className="border-b border-slate-200">
                   <tr>
-                    <th className="text-left p-4 font-medium">現場名</th>
-                    <th className="text-left p-4 font-medium">発注者名</th>
-                    <th className="text-left p-4 font-medium">担当者名</th>
-                    <th className="text-left p-4 font-medium">担当者連絡先</th>
-                    <th className="text-left p-4 font-medium">派遣スタッフ</th>
-                    <th className="text-left p-4 font-medium">現場日</th>
-                    <th className="text-left p-4 font-medium">操作</th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      現場名
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      発注者名
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      担当者名
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      担当者連絡先
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      現場日
+                    </th>
+                    <th className="text-left p-4 font-medium whitespace-nowrap">
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {sites.map((site) => (
                     <tr key={site.id} className="border-b hover:bg-slate-50">
-                      <td className="p-4">{site.name}</td>
-                      <td className="p-4">{site.client}</td>
-                      <td className="p-4">{site.contactPerson}</td>
-                      <td className="p-4">{site.contactPhone}</td>
-                      <td className="p-4">
-                        {site.employeeNames ? (
-                          <div className="flex flex-wrap gap-1">
-                            {site.employeeNames
-                              .split(",")
-                              .map((name, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
-                                >
-                                  {name.trim()}
-                                </span>
-                              ))}
-                          </div>
-                        ) : (
-                          "未設定"
-                        )}
+                      <td className="p-4 whitespace-nowrap">{site.name}</td>
+                      <td className="p-4 whitespace-nowrap">{site.client}</td>
+                      <td className="p-4 whitespace-nowrap">
+                        {site.contactPerson}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
+                        {site.contactPhone}
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
                         {site.siteDates.length > 0
                           ? site.siteDates
                               .map((date) => formatDate(date.date.toString()))
@@ -277,7 +290,7 @@ export default function SiteList() {
                           : "未設定"}
                       </td>
 
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">
                         <div className="flex gap-2">
                           <Button
                             variant="outline"

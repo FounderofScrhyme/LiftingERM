@@ -51,14 +51,38 @@ export async function POST(request: NextRequest) {
     // 現場日データを保存
     if (body.siteDates && Array.isArray(body.siteDates)) {
       try {
-        await prisma.siteDate.createMany({
-          data: body.siteDates.map((siteDate: any) => ({
-            siteId: site.id,
-            date: new Date(siteDate.date),
-            startTime: siteDate.startTime ? new Date(siteDate.startTime) : null,
-            endTime: siteDate.endTime ? new Date(siteDate.endTime) : null,
-          })),
-        });
+        for (const siteDate of body.siteDates) {
+          // JSTの0時で保存
+          const dateObj = new Date(siteDate.date);
+          const jstDate = new Date(
+            dateObj.getTime() -
+              dateObj.getTimezoneOffset() * 60000 +
+              9 * 60 * 60000
+          );
+          const createdSiteDate = await prisma.siteDate.create({
+            data: {
+              siteId: site.id,
+              date: jstDate,
+              startTime: siteDate.startTime
+                ? new Date(siteDate.startTime)
+                : null,
+              endTime: siteDate.endTime ? new Date(siteDate.endTime) : null,
+            },
+          });
+
+          // その日のスタッフデータを保存
+          if (siteDate.employees && Array.isArray(siteDate.employees)) {
+            await prisma.siteDateEmployee.createMany({
+              data: siteDate.employees.map((employee: any) => ({
+                siteDateId: createdSiteDate.id,
+                employeeId: employee.id,
+                unitPay: employee.unitPay || null,
+                hourlyOvertimePay: employee.hourlyOvertimePay || null,
+                userId: user.id,
+              })),
+            });
+          }
+        }
       } catch (error) {
         console.error("SiteDate creation error:", error);
         // 現場日データの保存に失敗しても現場自体は保存する
@@ -116,6 +140,37 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
     const month = searchParams.get("month") || "";
+    const recent = searchParams.get("recent") || "";
+
+    // サジェスト用: recent=1 の場合は過去30日以内の現場名候補のみ返す
+    if (recent === "1") {
+      const now = new Date();
+      const before30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const where: any = {
+        userId: user.id,
+        createdAt: { gte: before30 },
+        ...(search && {
+          name: { contains: search, mode: "insensitive" as const },
+        }),
+      };
+      const sites = await prisma.site.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          name: true,
+          client: true,
+          contactPerson: true,
+          contactPhone: true,
+          postalCode: true,
+          address: true,
+          googleMapLink: true,
+          notes: true,
+        },
+      });
+      return NextResponse.json({ sites });
+    }
 
     // オフセットを計算
     const offset = (page - 1) * limit;
@@ -155,6 +210,13 @@ export async function GET(request: NextRequest) {
         include: {
           siteDates: {
             orderBy: { date: "asc" },
+            include: {
+              siteDateEmployees: {
+                include: {
+                  employee: true,
+                },
+              },
+            },
           },
         },
         orderBy: { createdAt: "desc" },

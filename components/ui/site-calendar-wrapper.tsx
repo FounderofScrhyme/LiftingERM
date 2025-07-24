@@ -18,10 +18,25 @@ interface Site {
     date: string;
     startTime?: string;
     endTime?: string;
+    siteDateEmployees?: Array<{
+      id: string;
+      employee: {
+        id: string;
+        name: string;
+      };
+    }>;
   }>;
 }
 
-export default function SiteCalendarWrapper() {
+export interface SiteCalendarWrapperProps {
+  selectedDate?: Date | null;
+  setSelectedDate?: (date: Date | null) => void;
+}
+
+export default function SiteCalendarWrapper({
+  selectedDate,
+  setSelectedDate,
+}: SiteCalendarWrapperProps) {
   const [sites, setSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,5 +92,11 @@ export default function SiteCalendarWrapper() {
     );
   }
 
-  return <SiteCalendar sites={sites} />;
+  return (
+    <SiteCalendar
+      sites={sites}
+      selectedDate={selectedDate}
+      setSelectedDate={setSelectedDate}
+    />
+  );
 }

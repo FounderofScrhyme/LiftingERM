@@ -10,6 +10,7 @@ import {
   CreditCard,
   LogOutIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "../ui/button";
 import { SignOutButton } from "@clerk/nextjs";
 import {
@@ -125,10 +126,16 @@ function ClientNavbar() {
                     key={navLink.label}
                     className="py-4 font-medium flex items-center gap-3"
                   >
-                    <div className="w-5 flex justify-center">
-                      <IconComponent size={20} />
-                    </div>
-                    {navLink.label}
+                    <Link
+                      href={navLink.href}
+                      className="flex items-center gap-3 hover:text-blue-500 transition-colors"
+                      onClick={() => setOpenMenu(false)}
+                    >
+                      <div className="w-5 flex justify-center">
+                        <IconComponent size={20} />
+                      </div>
+                      {navLink.label}
+                    </Link>
                   </li>
                 );
               })}
@@ -197,10 +204,16 @@ function ClientNavbar() {
                     key={navLink.label}
                     className="py-2 font-medium flex items-center gap-3"
                   >
-                    <div className="w-5 flex justify-center">
-                      <IconComponent size={20} />
-                    </div>
-                    {navLink.label}
+                    <Link
+                      href={navLink.href}
+                      className="flex items-center gap-3 hover:text-blue-500 transition-colors"
+                      onClick={() => setOpenMenu(false)}
+                    >
+                      <div className="w-5 flex justify-center">
+                        <IconComponent size={20} />
+                      </div>
+                      {navLink.label}
+                    </Link>
                   </li>
                 );
               })}

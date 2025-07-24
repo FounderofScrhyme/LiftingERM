@@ -284,35 +284,45 @@ export default function SalesList() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-4 font-medium">取引先</th>
-                      <th className="text-left p-4 font-medium">売上金額</th>
-                      <th className="text-left p-4 font-medium">売上日</th>
-                      <th className="text-left p-4 font-medium">備考</th>
-                      <th className="text-left p-4 font-medium">操作</th>
+                      <th className="text-left p-4 font-medium whitespace-nowrap">
+                        取引先
+                      </th>
+                      <th className="text-left p-4 font-medium whitespace-nowrap">
+                        売上金額
+                      </th>
+                      <th className="text-left p-4 font-medium whitespace-nowrap">
+                        売上日
+                      </th>
+                      <th className="text-left p-4 font-medium whitespace-nowrap">
+                        備考
+                      </th>
+                      <th className="text-left p-4 font-medium whitespace-nowrap">
+                        操作
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {sales.map((sale) => (
                       <tr key={sale.id} className="border-b hover:bg-slate-50">
-                        <td className="p-4">
+                        <td className="p-4 whitespace-nowrap">
                           <div className="font-medium">
                             {sale.client.companyName}
                           </div>
                         </td>
-                        <td className="p-4">
+                        <td className="p-4 whitespace-nowrap">
                           <span className="font-semibold text-green-600">
                             ¥{sale.amount.toLocaleString()}
                           </span>
                         </td>
-                        <td className="p-4">
+                        <td className="p-4 whitespace-nowrap">
                           {new Date(sale.date).toLocaleDateString("ja-JP")}
                         </td>
-                        <td className="p-4">
+                        <td className="p-4 whitespace-nowrap">
                           <span className="text-slate-600">
                             {sale.notes || "なし"}
                           </span>
                         </td>
-                        <td className="p-4">
+                        <td className="p-4 whitespace-nowrap">
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
@@ -435,15 +445,19 @@ export default function SalesList() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-4 font-medium">年月</th>
-                      <th className="text-left p-4 font-medium">月間売上</th>
+                      <th className="text-left p-4 font-medium whitespace-nowrap">
+                        年月
+                      </th>
+                      <th className="text-left p-4 font-medium whitespace-nowrap">
+                        月間売上
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {clientStats.monthlyData.map((m) => (
                       <tr key={`${m.year}-${m.month}`} className="border-b">
-                        <td className="p-4">{m.label}</td>
-                        <td className="p-4 font-semibold text-green-600">
+                        <td className="p-4 whitespace-nowrap">{m.label}</td>
+                        <td className="p-4 font-semibold text-green-600 whitespace-nowrap">
                           ¥{m.amount.toLocaleString()}
                         </td>
                       </tr>

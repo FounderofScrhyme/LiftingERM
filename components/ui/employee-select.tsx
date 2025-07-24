@@ -15,8 +15,8 @@ interface Employee {
 interface SelectedEmployee {
   id: string;
   name: string;
-  unitPay: number;
-  hourlyOvertimePay: number;
+  unitPay: number | null;
+  hourlyOvertimePay: number | null;
 }
 
 interface EmployeeSelectProps {

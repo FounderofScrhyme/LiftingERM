@@ -35,6 +35,13 @@ export async function GET(
       include: {
         siteDates: {
           orderBy: { date: "asc" },
+          include: {
+            siteDateEmployees: {
+              include: {
+                employee: true,
+              },
+            },
+          },
         },
       },
     });
@@ -101,28 +108,17 @@ export async function PUT(
       );
     }
 
-    // データベースを更新
-    const updatedSite = await prisma.site.update({
-      where: { id: params.id },
-      data: {
-        name: validatedData.name,
-        client: validatedData.client,
-        contactPerson: validatedData.contactPerson,
-        contactPhone: validatedData.contactPhone,
-        postalCode: validatedData.postalCode || null,
-        address: validatedData.address,
-        googleMapLink: validatedData.googleMapLink || null,
-        employeeNames: validatedData.employeeNames || null,
-        notes: validatedData.notes || null,
-      },
-      include: {
-        siteDates: {
-          orderBy: { date: "asc" },
-        },
-      },
+    // 既存の現場日データとスタッフデータを削除
+    const siteDateIds = await prisma.siteDate.findMany({
+      where: { siteId: params.id },
+      select: { id: true },
     });
-
-    // 既存の現場日データを削除
+    const siteDateIdList = siteDateIds.map((d) => d.id);
+    if (siteDateIdList.length > 0) {
+      await prisma.siteDateEmployee.deleteMany({
+        where: { siteDateId: { in: siteDateIdList } },
+      });
+    }
     await prisma.siteDate.deleteMany({
       where: { siteId: params.id },
     });
@@ -130,14 +126,31 @@ export async function PUT(
     // 新しい現場日データを保存
     if (body.siteDates && Array.isArray(body.siteDates)) {
       try {
-        await prisma.siteDate.createMany({
-          data: body.siteDates.map((siteDate: any) => ({
-            siteId: params.id,
-            date: new Date(siteDate.date),
-            startTime: siteDate.startTime ? new Date(siteDate.startTime) : null,
-            endTime: siteDate.endTime ? new Date(siteDate.endTime) : null,
-          })),
-        });
+        for (const siteDate of body.siteDates) {
+          const createdSiteDate = await prisma.siteDate.create({
+            data: {
+              siteId: params.id,
+              date: new Date(siteDate.date),
+              startTime: siteDate.startTime
+                ? new Date(siteDate.startTime)
+                : null,
+              endTime: siteDate.endTime ? new Date(siteDate.endTime) : null,
+            },
+          });
+
+          // その日のスタッフデータを保存
+          if (siteDate.employees && Array.isArray(siteDate.employees)) {
+            await prisma.siteDateEmployee.createMany({
+              data: siteDate.employees.map((employee: any) => ({
+                siteDateId: createdSiteDate.id,
+                employeeId: employee.id,
+                unitPay: employee.unitPay || null,
+                hourlyOvertimePay: employee.hourlyOvertimePay || null,
+                userId: user.id,
+              })),
+            });
+          }
+        }
       } catch (error) {
         console.error("SiteDate update error:", error);
       }
@@ -149,6 +162,13 @@ export async function PUT(
       include: {
         siteDates: {
           orderBy: { date: "asc" },
+          include: {
+            siteDateEmployees: {
+              include: {
+                employee: true,
+              },
+            },
+          },
         },
       },
     });
